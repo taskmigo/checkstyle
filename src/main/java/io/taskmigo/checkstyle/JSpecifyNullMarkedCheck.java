@@ -23,6 +23,11 @@ public final class JSpecifyNullMarkedCheck extends AbstractCheck {
     private static final String JSPECIFY_NULL_MARKED = "org.jspecify.annotations.NullMarked";
     private static final String JSPECIFY_ANNOTATIONS_WILDCARD = "org.jspecify.annotations.*";
 
+    /**
+     * Creates a JSpecify package nullness check.
+     */
+    public JSpecifyNullMarkedCheck() {}
+
     @Override
     public int[] getDefaultTokens() {
         return new int[] { TokenTypes.COMPILATION_UNIT };
