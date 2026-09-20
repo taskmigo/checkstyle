@@ -29,8 +29,44 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: git show "$BASE_SHA:build.gradle.kts" > "$RUNNER_TEMP/base-build.gradle.kts"
 
+      - name: Install SemVer CLI
+        run: npm install --global semver
+
       - name: Verify version increment
-        run: python scripts/check_version.py "$RUNNER_TEMP/base-build.gradle.kts" build.gradle.kts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_VERSION="$(
+            sed -nE               -e 's/^version = "([^"]+)"$/\1/p'               -e 's/^version = providers\.gradleProperty\("version"\)\.orElse\("([^"]+)"\)\.get\(\)$/\1/p'               "$RUNNER_TEMP/base-build.gradle.kts"
+          )"
+          HEAD_VERSION="$(
+            sed -nE 's/^version = "([^"]+)"$/\1/p' build.gradle.kts
+          )"
+
+          if [[ -z "$BASE_VERSION" ]]; then
+            echo "::error::Base build.gradle.kts does not declare a recognizable SemVer."
+            exit 1
+          fi
+          if [[ -z "$HEAD_VERSION" ]]; then
+            echo '::error::PR build.gradle.kts must contain a hard-coded version assignment like version = "0.1.0".'
+            exit 1
+          fi
+
+          if [[ -z "$(semver "$BASE_VERSION")" ]]; then
+            echo "::error::Invalid base SemVer: $BASE_VERSION"
+            exit 1
+          fi
+          if [[ -z "$(semver "$HEAD_VERSION")" ]]; then
+            echo "::error::Invalid PR SemVer: $HEAD_VERSION"
+            exit 1
+          fi
+          if ! semver "$HEAD_VERSION" --range ">$BASE_VERSION" >/dev/null; then
+            echo "::error::Version must increase for every PR merged to next: base=$BASE_VERSION, head=$HEAD_VERSION"
+            exit 1
+          fi
+
+          echo "Version increment is valid: $BASE_VERSION -> $HEAD_VERSION"
 
   build:
     runs-on: ubuntu-latest

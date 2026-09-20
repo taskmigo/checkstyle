@@ -25,6 +25,9 @@ jobs:
           java-version: "26"
           cache: gradle
 
+      - name: Install SemVer CLI
+        run: npm install --global semver
+
       - name: Resolve project version
         id: version
         shell: bash
@@ -35,6 +38,10 @@ jobs:
           )"
           if [[ -z "$VERSION" ]]; then
             echo "::error::build.gradle.kts must contain a hard-coded version assignment."
+            exit 1
+          fi
+          if [[ -z "$(semver "$VERSION")" ]]; then
+            echo "::error::Invalid project SemVer: $VERSION"
             exit 1
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
