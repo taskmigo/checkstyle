@@ -1,0 +1,93 @@
+name: Version
+
+on:
+  pull_request:
+    branches:
+      - next
+    paths:
+      - build.gradle.kts
+      - .github/workflows/version.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  semver:
+    name: Require SemVer increment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout pull request head
+        uses: actions/checkout@v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - name: Verify version increment
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        shell: python
+        run: |
+          import os
+          import re
+          import subprocess
+          import sys
+
+          VERSION_ASSIGNMENT = re.compile(
+              r'^version\s*=\s*"'
+              r'(?P<version>0|[1-9]\d*)\.'
+              r'(?:0|[1-9]\d*)\.'
+              r'(?:0|[1-9]\d*)'
+              r'(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?'
+              r'(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?'
+              r'"\s*$',
+              re.MULTILINE,
+          )
+          SEMVER = re.compile(
+              r'^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)'
+              r'(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?'
+              r'(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$'
+          )
+
+          def version_from(text: str, source: str) -> str:
+              match = VERSION_ASSIGNMENT.search(text)
+              if match is None:
+                  print(f"::error::{source} must contain a hard-coded SemVer assignment like version = \"0.1.0\"")
+                  sys.exit(1)
+              return match.group("version")
+
+          def prerelease_key(value: str | None):
+              if value is None:
+                  return (1, ())
+              parts = []
+              for item in value.split("."):
+                  if item.isdigit():
+                      parts.append((0, int(item)))
+                  else:
+                      parts.append((1, item))
+              return (0, tuple(parts))
+
+          def semver_key(value: str):
+              match = SEMVER.fullmatch(value)
+              if match is None:
+                  print(f"::error::Invalid SemVer: {value}")
+                  sys.exit(1)
+              major, minor, patch, prerelease = match.groups()
+              return (int(major), int(minor), int(patch), prerelease_key(prerelease))
+
+          with open("build.gradle.kts", encoding="utf-8") as current_file:
+              current = version_from(current_file.read(), "PR build.gradle.kts")
+
+          base_text = subprocess.check_output(
+              ["git", "show", f"{os.environ['BASE_SHA']}:build.gradle.kts"],
+              text=True,
+          )
+          base = version_from(base_text, "Base build.gradle.kts")
+
+          if semver_key(current) <= semver_key(base):
+              print(f"::error::Version must increase for every PR merged to next: base={base}, head={current}")
+              sys.exit(1)
+
+          print(f"Version increment is valid: {base} -> {current}")
