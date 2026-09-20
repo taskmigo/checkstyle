@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   publish:
@@ -46,14 +45,17 @@ jobs:
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Validate release tag
-        if: github.event_name == 'push'
+      - name: Validate release ref
         env:
           PROJECT_VERSION: ${{ steps.version.outputs.value }}
         shell: bash
         run: |
           set -euo pipefail
-          if [[ "$GITHUB_REF_NAME" != "v$PROJECT_VERSION" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "$GITHUB_REF" != "refs/heads/next" ]]; then
+            echo "::error::Manual releases must be dispatched from the next branch."
+            exit 1
+          fi
+          if [[ "$GITHUB_EVENT_NAME" == "push" && "$GITHUB_REF_NAME" != "v$PROJECT_VERSION" ]]; then
             echo "::error::Tag $GITHUB_REF_NAME does not match project version v$PROJECT_VERSION."
             exit 1
           fi
@@ -61,7 +63,25 @@ jobs:
       - name: Build and test
         run: ./gradlew --no-daemon --console=plain build
 
-      - name: Publish to GitHub Packages
+      - name: Validate Maven Central credentials
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: ./gradlew --no-daemon --console=plain publishMavenJavaPublicationToGitHubPackagesRepository
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in             ORG_GRADLE_PROJECT_mavenCentralUsername             ORG_GRADLE_PROJECT_mavenCentralPassword             ORG_GRADLE_PROJECT_signingInMemoryKey; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "::error::Missing required release secret for $name."
+              exit 1
+            fi
+          done
+
+      - name: Publish to Maven Central
+        env:
+          ORG_GRADLE_PROJECT_mavenCentralUsername: ${{ secrets.MAVEN_CENTRAL_USERNAME }}
+          ORG_GRADLE_PROJECT_mavenCentralPassword: ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
+          ORG_GRADLE_PROJECT_signingInMemoryKey: ${{ secrets.SIGNING_KEY }}
+          ORG_GRADLE_PROJECT_signingInMemoryKeyPassword: ${{ secrets.SIGNING_KEY_PASSWORD }}
+        run: ./gradlew --no-daemon --console=plain publishAndReleaseToMavenCentral

@@ -20,7 +20,16 @@ The packaged default `checkstyle.xml` also enables Checkstyle's built-in `Javado
 io.taskmigo:checkstyle:<version>
 ```
 
-Every pull request targeting `next` must increase the hard-coded project SemVer. Releases can be started manually with the Release workflow, or by pushing a matching `v<version>` tag. The release workflow publishes the version declared in `build.gradle.kts` with the repository-scoped `GITHUB_TOKEN`.
+Released versions are published to Maven Central and can be resolved with `mavenCentral()`.
+
+Every pull request targeting `next` must increase the hard-coded project SemVer. Releases can be started manually from the `next` branch with the Release workflow, or by pushing a matching `v<version>` tag.
+
+The Release workflow requires these repository secrets:
+
+- `MAVEN_CENTRAL_USERNAME` — Central Portal user-token username.
+- `MAVEN_CENTRAL_PASSWORD` — Central Portal user-token password.
+- `SIGNING_KEY` — ASCII-armored PGP private key.
+- `SIGNING_KEY_PASSWORD` — PGP private-key password, if one is configured.
 
 ## Build
 

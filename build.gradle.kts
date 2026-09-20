@@ -1,18 +1,18 @@
-import org.gradle.api.tasks.compile.JavaCompile
-import org.gradle.api.tasks.javadoc.Javadoc
-import org.gradle.external.javadoc.StandardJavadocDocletOptions
 import org.gradle.api.plugins.quality.Checkstyle
 import org.gradle.api.plugins.quality.CheckstyleExtension
 import org.gradle.api.tasks.SourceSetContainer
+import org.gradle.api.tasks.compile.JavaCompile
+import org.gradle.api.tasks.javadoc.Javadoc
+import org.gradle.external.javadoc.StandardJavadocDocletOptions
 
 plugins {
     `java-library`
     checkstyle
-    `maven-publish`
+    alias(libs.plugins.vanniktech.maven.publish)
 }
 
 group = "io.taskmigo"
-version = "0.1.0"
+version = "0.1.1"
 
 repositories {
     mavenCentral()
@@ -22,8 +22,6 @@ java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(26)
     }
-    withSourcesJar()
-    withJavadocJar()
 }
 
 dependencies {
@@ -66,28 +64,38 @@ tasks.withType<Checkstyle>().configureEach {
     }
 }
 
-publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            artifactId = "checkstyle"
+mavenPublishing {
+    publishToMavenCentral()
+    signAllPublications()
 
-            pom {
-                name.set("Taskmigo Checkstyle")
-                description.set("Taskmigo-specific Checkstyle extensions")
-                url.set("https://github.com/taskmigo/checkstyle")
+    coordinates(group.toString(), "checkstyle", version.toString())
+
+    pom {
+        name.set("Taskmigo Checkstyle")
+        description.set("Taskmigo-specific Checkstyle extensions")
+        inceptionYear.set("2026")
+        url.set("https://github.com/taskmigo/checkstyle")
+
+        licenses {
+            license {
+                name.set("MIT License")
+                url.set("https://opensource.org/license/mit")
+                distribution.set("repo")
             }
         }
-    }
 
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/taskmigo/checkstyle")
-            credentials {
-                username = providers.environmentVariable("GITHUB_ACTOR").orNull
-                password = providers.environmentVariable("GITHUB_TOKEN").orNull
+        developers {
+            developer {
+                id.set("taskmigo")
+                name.set("Taskmigo")
+                url.set("https://github.com/taskmigo")
             }
+        }
+
+        scm {
+            url.set("https://github.com/taskmigo/checkstyle")
+            connection.set("scm:git:git://github.com/taskmigo/checkstyle.git")
+            developerConnection.set("scm:git:ssh://git@github.com/taskmigo/checkstyle.git")
         }
     }
 }
