@@ -20,7 +20,9 @@ The packaged default `checkstyle.xml` also enables Checkstyle's built-in `Javado
 io.taskmigo:checkstyle:<version>
 ```
 
-The artifact is configured for publication to GitHub Packages.
+The artifact is published to GitHub Packages when a `v<version>` tag is pushed, for example
+`v0.1.0`. The release workflow derives the Maven version from the tag and publishes with the
+repository-scoped `GITHUB_TOKEN`.
 
 ## Build
 

@@ -25,4 +25,4 @@ jobs:
           cache: gradle
 
       - name: Build and test
-        run: ./gradlew --no-daemon --console=plain build
+        run: ./gradlew --no-daemon --console=plain build publishToMavenLocal

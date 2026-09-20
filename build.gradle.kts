@@ -11,10 +11,6 @@ plugins {
 group = "io.taskmigo"
 version = providers.gradleProperty("version").orElse("0.1.0-SNAPSHOT").get()
 
-val checkstyleVersion = "14.1.0"
-val jspecifyVersion = "1.0.1"
-val junitVersion = "6.1.3"
-
 repositories {
     mavenCentral()
 }
@@ -28,12 +24,12 @@ java {
 }
 
 dependencies {
-    compileOnly("com.puppycrawl.tools:checkstyle:$checkstyleVersion")
-    compileOnly("org.jspecify:jspecify:$jspecifyVersion")
+    compileOnly(libs.checkstyle)
+    compileOnly(libs.jspecify)
 
-    testImplementation("com.puppycrawl.tools:checkstyle:$checkstyleVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitVersion")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher:$junitVersion")
+    testImplementation(libs.checkstyle)
+    testImplementation(libs.junit.jupiter)
+    testRuntimeOnly(libs.junit.platform.launcher)
 }
 
 tasks.withType<Test>().configureEach {
@@ -41,7 +37,7 @@ tasks.withType<Test>().configureEach {
 }
 
 extensions.configure<CheckstyleExtension> {
-    toolVersion = checkstyleVersion
+    toolVersion = libs.versions.checkstyle.get()
     configFile = layout.projectDirectory.file("src/main/resources/checkstyle.xml").asFile
 }
 
