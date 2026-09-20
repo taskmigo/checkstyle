@@ -12,7 +12,7 @@ plugins {
 }
 
 group = "io.taskmigo"
-version = providers.gradleProperty("version").orElse("0.1.0-SNAPSHOT").get()
+version = "0.1.0"
 
 repositories {
     mavenCentral()

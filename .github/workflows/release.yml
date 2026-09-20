@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  workflow_dispatch:
   push:
     tags:
       - "v*"
@@ -24,25 +25,43 @@ jobs:
           java-version: "26"
           cache: gradle
 
-      - name: Resolve version
+      - name: Install SemVer CLI
+        run: npm install --global semver
+
+      - name: Resolve project version
         id: version
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [[ -z "$VERSION" || "$VERSION" == "$GITHUB_REF_NAME" ]]; then
-            echo "::error::Release tags must use the v<version> format."
+          VERSION="$(
+            sed -nE 's/^version = "([^"]+)"$/\1/p' build.gradle.kts
+          )"
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::build.gradle.kts must contain a hard-coded version assignment."
+            exit 1
+          fi
+          if [[ -z "$(semver "$VERSION")" ]]; then
+            echo "::error::Invalid project SemVer: $VERSION"
             exit 1
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
 
+      - name: Validate release tag
+        if: github.event_name == 'push'
+        env:
+          PROJECT_VERSION: ${{ steps.version.outputs.value }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_NAME" != "v$PROJECT_VERSION" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match project version v$PROJECT_VERSION."
+            exit 1
+          fi
+
       - name: Build and test
-        run: ./gradlew --no-daemon --console=plain build -Pversion="${{ steps.version.outputs.value }}"
+        run: ./gradlew --no-daemon --console=plain build
 
       - name: Publish to GitHub Packages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          ./gradlew --no-daemon --console=plain \
-            publishMavenJavaPublicationToGitHubPackagesRepository \
-            -Pversion="${{ steps.version.outputs.value }}"
+        run: ./gradlew --no-daemon --console=plain publishMavenJavaPublicationToGitHubPackagesRepository

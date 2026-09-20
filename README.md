@@ -20,9 +20,7 @@ The packaged default `checkstyle.xml` also enables Checkstyle's built-in `Javado
 io.taskmigo:checkstyle:<version>
 ```
 
-The artifact is published to GitHub Packages when a `v<version>` tag is pushed, for example
-`v0.1.0`. The release workflow derives the Maven version from the tag and publishes with the
-repository-scoped `GITHUB_TOKEN`.
+Every pull request targeting `next` must increase the hard-coded project SemVer. Releases can be started manually with the Release workflow, or by pushing a matching `v<version>` tag. The release workflow publishes the version declared in `build.gradle.kts` with the repository-scoped `GITHUB_TOKEN`.
 
 ## Build
 
