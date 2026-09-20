@@ -66,7 +66,9 @@ tasks.withType<Checkstyle>().configureEach {
 
 mavenPublishing {
     publishToMavenCentral()
-    signAllPublications()
+    if (providers.gradleProperty("signingInMemoryKey").isPresent) {
+        signAllPublications()
+    }
 
     coordinates(group.toString(), "checkstyle", version.toString())
 
