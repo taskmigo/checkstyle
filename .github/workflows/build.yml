@@ -1,0 +1,28 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - next
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Set up Java
+        uses: actions/setup-java@v6.0.1
+        with:
+          distribution: temurin
+          java-version: "26"
+          cache: gradle
+
+      - name: Build and test
+        run: ./gradlew --no-daemon --console=plain build
